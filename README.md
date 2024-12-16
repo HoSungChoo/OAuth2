@@ -7,3 +7,4 @@ OAuth 2.0 + Spring Security + JWT를 이용하여 인증/인가 및 회원 데�
 - Java : 21
 - Spring : 3.4.0
 - MySQL : 8.0.30
+- JWT : 0.12.3
