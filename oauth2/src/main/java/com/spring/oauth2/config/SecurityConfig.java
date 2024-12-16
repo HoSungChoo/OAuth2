@@ -1,12 +1,14 @@
 package com.spring.oauth2.config;
 
-import com.spring.oauth.oauth.HttpCookieOAuth2AuthorizationRequestRepository;
-import com.spring.oauth.oauth.handler.OAuthAuthenticationFailureHandler;
-import com.spring.oauth.oauth.handler.OAuthAuthenticationSuccessHandler;
-import com.spring.oauth.oauth.service.CustomOAuthUserService;
+import com.spring.oauth2.handler.CustomSuccessHandler;
+import com.spring.oauth2.jwt.JWTFilter;
+import com.spring.oauth2.jwt.JWTUtil;
+import com.spring.oauth2.service.CustomOAuth2UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.SpringApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,7 +18,13 @@ import org.springframework.security.config.annotation.web.configurers.HeadersCon
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.client.web.OAuth2LoginAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.Collections;
 
 import static org.springframework.security.web.util.matcher.AntPathRequestMatcher.antMatcher;
 
@@ -24,53 +32,59 @@ import static org.springframework.security.web.util.matcher.AntPathRequestMatche
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
-    private final CustomOAuthUserService customOAuthUserService;
-    private final OAuthAuthenticationSuccessHandler oAuthAuthenticationSuccessHandler;
-    private final OAuthAuthenticationFailureHandler oAuthAuthenticationFailureHandler;
-    private final HttpCookieOAuth2AuthorizationRequestRepository httpCookieOAuth2AuthorizationRequestRepository;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final CustomSuccessHandler customSuccessHandler;
+    private final JWTUtil jwtUtil;
 
     @Bean
-    public PasswordEncoder passwordEncoder(){
-        return new BCryptPasswordEncoder();
-    }
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // cors 설정
+        http.cors(corsCustomizer -> corsCustomizer.configurationSource(new CorsConfigurationSource() {
+            @Override
+            public CorsConfiguration getCorsConfiguration(HttpServletRequest request) {
+                CorsConfiguration configuration = new CorsConfiguration();
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception{
-        log.info("SecurityFilterChain begin");
+                configuration.setAllowedOrigins(Collections.singletonList("http://localhost:3000"));
+                configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT"));
+                configuration.setAllowCredentials(true); // Client가 요청에 인증 정보(쿠키, Authorization Header)를 포함할 수 있다.
+                configuration.setAllowedHeaders(Arrays.asList("Content-Type", "Authorization"));
+                configuration.setMaxAge(3600L);
 
-        http.csrf(AbstractHttpConfigurer::disable)
-                // csrf 설정
-                .headers(headersConfigurer -> headersConfigurer.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
+                // Client가 접근할 수 있는 헤더 설정
+                configuration.setExposedHeaders(Arrays.asList("Set-Cookie", "Authorization"));
 
-                // Form 로그인 방식 비활성화
-                .formLogin(AbstractHttpConfigurer::disable)
+                return configuration;
+            }
+        }));
+        // csrf 비활성화
+        http.csrf(AbstractHttpConfigurer::disable);
 
-                // HTTP Basic 로그인 방식 비활성화
-                .httpBasic(AbstractHttpConfigurer::disable)
+        // From 로그인 방식 비활성화
+        http.formLogin(AbstractHttpConfigurer::disable);
 
-                // Path 접근 권한 설정
-                .authorizeHttpRequests((requests)-> requests
-                        .requestMatchers(antMatcher("/api/admin/**")).hasRole("ADMIN") // 해당 경로는 ADMIN만 접근 가능
-                        .requestMatchers(antMatcher("/api/user/**")).hasRole("USER") // 해당 경로는 USER만 접근 가능
-                        .requestMatchers(antMatcher("/h2-console/**")).permitAll() // 해당 경로는 모두 접근 가능
-                        .anyRequest().authenticated() // 나머지 경로는 로그인한 사용자만 접근 가능
-                )
+        // HTTP Basic 인증 방식 비활성화
+        http.httpBasic(AbstractHttpConfigurer::disable);
 
-                // 세션 관리 방식 정의. STATELESS는 세션을 사용하지 않기 때문에, 클라이언트는 각 요청마다 인증 정보를 제공해야 함
-                .sessionManagement(sessions
-                        -> sessions.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        // JWTFilter 추가. JWTFilter 는 토큰을 검증하며, 사용자 정보를 Spring Security 컨텍스트에 등록한다.
+        http.addFilterAfter(new JWTFilter(jwtUtil), OAuth2LoginAuthenticationFilter.class);
 
-                // Default 설정
-                .oauth2Login(configure ->
-                        configure.authorizationEndpoint(config
-                                        -> config.authorizationRequestRepository(httpCookieOAuth2AuthorizationRequestRepository))
-                                .userInfoEndpoint(config -> config.userService(customOAuthUserService))
-                                .successHandler(oAuthAuthenticationSuccessHandler)
-                                .failureHandler(oAuthAuthenticationFailureHandler)
-                );
+        // oauth2
+        http.oauth2Login((oauth2) -> oauth2
+                .userInfoEndpoint((userInfoEndpointConfig) -> userInfoEndpointConfig
+                        .userService(customOAuth2UserService))
+                .successHandler(customSuccessHandler));
 
-        log.info("SecurityFilterChain end");
+        // 경로별 인가 작업
+        http.authorizeHttpRequests((auth)
+                -> auth
+                .requestMatchers("/").permitAll() // root 접근은 전부 허용
+                .anyRequest().authenticated()); // 나머지 접근은 인증된 사용자만 허용
+
+        // 세션 설정 : STATELESS
+        // STATELESS는 세션을 사용하지 않기 때문에, 클라이언트는 각 요청마다 인증 정보를 제공해야 함
+        http.sessionManagement((session)
+                -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+
         return http.build();
     }
 }
