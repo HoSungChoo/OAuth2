@@ -20,6 +20,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     // 리소스 서버로부터 받은 유저 정보를 기반으로 로그인을 진행하는 과정
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException{
+        System.out.println("CustomOAuth2UserService:loadUser exec");
+        System.out.println(userRequest.getAccessToken());
+        System.out.println(userRequest.getClientRegistration());
+        System.out.println(userRequest.getAdditionalParameters());
         OAuth2User oAuth2User = super.loadUser(userRequest);
         System.out.println(oAuth2User);
 

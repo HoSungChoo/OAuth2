@@ -24,6 +24,7 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
     // 로그인 성공 시 해당 메서드 동작
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
+        System.out.println("CustomSuccessHandler:onAuthenticationSuccess exec");
         // 로그인 성공 시 사용자 정보 불러오기
         CustomOAuth2User customUserDetails = (CustomOAuth2User) authentication.getPrincipal();
 
@@ -37,8 +38,8 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         // jwt 토큰 생성 및 전달
         String token = jwtUtil.createJwt(username, role, 60*60*60L);
-        response.addCookie(createCookie("Authorization", token));
-        response.sendRedirect("localhost:3000");
+        response.addCookie(createCookie("Authorization2", token));
+        response.sendRedirect("https://www.naver.com");
     }
 
     private Cookie createCookie(String key, String value){

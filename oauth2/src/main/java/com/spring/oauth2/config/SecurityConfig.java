@@ -38,6 +38,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        System.out.println("SecurityConfig:filterChain exec");
         // cors 설정
         http.cors(corsCustomizer -> corsCustomizer.configurationSource(new CorsConfigurationSource() {
             @Override
@@ -71,8 +72,8 @@ public class SecurityConfig {
         // oauth2
         http.oauth2Login((oauth2) -> oauth2
                 .userInfoEndpoint((userInfoEndpointConfig) -> userInfoEndpointConfig
-                        .userService(customOAuth2UserService))
-                .successHandler(customSuccessHandler));
+                        .userService(customOAuth2UserService)) // access token -> userInfo 메서드가 실행을 마칠 경우 발동
+                .successHandler(customSuccessHandler)); // userService 내부 메서드가 실행을 마칠 경우 발동
 
         // 경로별 인가 작업
         http.authorizeHttpRequests((auth)
