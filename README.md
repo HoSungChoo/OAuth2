@@ -11,4 +11,4 @@ OAuth 2.0 + Spring Security + JWT를 이용하여 인증/인가 및 회원 데�
 
 ## OAuth 2.0 흐름도
 
-![image](https://github.com/user-attachments/assets/9fd7675d-2d42-4e51-acb7-5a94cb1b65ed)
+![oauth](https://github.com/user-attachments/assets/c8bc7986-f348-482c-ad9d-e9bd86a98b99)
