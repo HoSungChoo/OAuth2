@@ -9,6 +9,9 @@ OAuth 2.0 + Spring Security + JWT를 이용하여 인증/인가 및 회원 데�
 - MySQL : 8.0.30
 - JWT : 0.12.3
 
+## 흐름 정리
+[OAuth 2.0 흐름 정리](https://velog.io/@hozzi03/OAuth-2.0-%ED%9D%90%EB%A6%84-%EC%A0%95%EB%A6%AC)
+
 ## OAuth 2.0 흐름도
 
 ![oauth](https://github.com/user-attachments/assets/ccd65cb3-0f36-405d-b818-206cf41dfab1)
