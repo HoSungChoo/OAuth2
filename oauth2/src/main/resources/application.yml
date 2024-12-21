@@ -9,7 +9,7 @@ spring:
     password: ${yml.file.datasource.password}
 
   jpa:
-    hibernate.ddl-auto: create
+    hibernate.ddl-auto: update
     show-sql: true
     properties:
       hibernate:

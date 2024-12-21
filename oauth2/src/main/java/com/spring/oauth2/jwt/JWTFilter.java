@@ -21,14 +21,13 @@ public class JWTFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        System.out.println("JWTFilter::doFilterInternal");
         // cookie를 불러온 뒤 Key name이 Authorization인 쿠키를 찾음
         String authorization = null;
         Cookie[] cookies = request.getCookies();
 
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                System.out.println(cookie.getName());
-
                 if (cookie.getName().equals("Authorization"))
                     authorization = cookie.getValue();
             }
@@ -57,9 +56,11 @@ public class JWTFilter extends OncePerRequestFilter {
         String role = jwtUtil.getRole(token);
 
         // userDTO를 생성하여 값 세팅
-        UserDTO userDTO = new UserDTO();
-        userDTO.setUsername(username);
-        userDTO.setRole(role);
+
+        UserDTO userDTO = UserDTO.builder()
+                .username(username)
+                .role(role)
+                .build();
 
         // User details 에 회원 정보 객체 담기
         CustomOAuth2User customOAuth2User = new CustomOAuth2User(userDTO);

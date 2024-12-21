@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 
@@ -38,8 +39,8 @@ public class CustomSuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         // jwt 토큰 생성 및 전달
         String token = jwtUtil.createJwt(username, role, 60*60*60L);
-        response.addCookie(createCookie("Authorization2", token));
-        response.sendRedirect("https://www.naver.com");
+        response.addCookie(createCookie("Authorization", token));
+        response.sendRedirect("http://localhost:3000/");
     }
 
     private Cookie createCookie(String key, String value){

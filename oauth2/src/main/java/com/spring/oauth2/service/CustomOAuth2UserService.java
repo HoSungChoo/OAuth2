@@ -3,6 +3,7 @@ package com.spring.oauth2.service;
 import com.spring.oauth2.dto.*;
 import com.spring.oauth2.entity.User;
 import com.spring.oauth2.repository.UserRepository;
+import com.zaxxer.hikari.util.ClockSource;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService;
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
@@ -11,6 +12,8 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 import javax.swing.text.html.Option;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Optional;
 
 @Service
@@ -20,12 +23,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
     // 리소스 서버로부터 받은 유저 정보를 기반으로 로그인을 진행하는 과정
     @Override
     public OAuth2User loadUser(OAuth2UserRequest userRequest) throws OAuth2AuthenticationException{
-        System.out.println("CustomOAuth2UserService:loadUser exec");
-        System.out.println(userRequest.getAccessToken());
-        System.out.println(userRequest.getClientRegistration());
-        System.out.println(userRequest.getAdditionalParameters());
+        System.out.println("load user");
         OAuth2User oAuth2User = super.loadUser(userRequest);
-        System.out.println(oAuth2User);
 
         String registrationId = userRequest.getClientRegistration().getRegistrationId();
         OAuth2Response oAuth2Response = switch (registrationId) {
@@ -38,7 +37,10 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         };
 
         String username = oAuth2Response.getProvider() + " " + oAuth2Response.getProviderId();
-        User user = userRepository.findByUsername(username);
+
+        User user = userRepository.findByUsername(username)
+                .map(users -> users.isEmpty() ? null : users.getFirst())
+                .orElse(null);
 
         // 데이터가 존재하지 않는 경우, 유저 데이터를 DB에 입력
         if (user == null){
@@ -52,12 +54,14 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             userRepository.save(newUser);
         }
 
+        // 기존 유저 정보 변경
+        /*
         else {
             user.setEmail(oAuth2Response.getEmail());
             user.setName(oAuth2Response.getName());
 
             userRepository.save(user);
-        }
+        }*/
 
         // 유저 정보 주입
         UserDTO userDTO = UserDTO.builder()
@@ -66,6 +70,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 .role("ROLE_USER")
                 .build();
 
+        System.out.println("terminate");
         return new CustomOAuth2User(userDTO);
     }
 }
